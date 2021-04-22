@@ -1,3 +1,24 @@
+import SimpleITK as sitk
+import matplotlib.pyplot as plt 
+
+def read_image(file_name):
+    img = sitk.ReadImage(file_name)
+    img = sitk.Cast(img, sitk.sitkFloat32)
+    img_data = sitk.GetArrayFromImage(img)
+    return img, img_data
+
+def plot_3d_img(img, img_data, cmap="gray"):
+    imageSize = img.GetSize()
+    plt.figure(figsize=(12, 8))
+    plt.subplot(131)
+    plt.imshow(img_data[int(imageSize[0]/2), :, :], cmap=cmap)
+    plt.subplot(132)
+    plt.title("3D image of a pelvic", size=16)
+    plt.imshow(img_data[:, int(imageSize[1]/2), :], cmap=cmap)
+    plt.subplot(133)
+    plt.imshow(img_data[:, :, int(imageSize[2]/2)], cmap=cmap)
+    plt.show()
+
 def est_lin_transf(im_ref, im_mov):
     """ Estimate linear transform to align `im_mov` to `im_ref` and 
     return the transform parameters. """
