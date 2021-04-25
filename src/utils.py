@@ -45,6 +45,7 @@ def mi(img1, img2, nbins=100):
     dist = - (H1 + H2) / H12
     return dist
 
+
 class Transform():
     def __init__(self, im_ref, im_mov, errtype='SSD'):
         super().__init__()
@@ -65,6 +66,7 @@ class Transform():
             raise Exception("Errtype not defined")
         return error
 
+
 class LinearTransform(Transform):
     def __init__(self, im_ref, im_mov, errtype='SSD'):
         super().__init__(im_ref, im_mov, errtype)
@@ -72,19 +74,58 @@ class LinearTransform(Transform):
     def apply_transf(self, lin_xfm):
         """ Apply given linear transform `lin_xfm` to `im_mov` and 
         return the transformed image. """
-        scale = np.array([[lin_xfm[0], 0], [0, lin_xfm[1]]])
-        rot = np.array([[np.cos(lin_xfm[2]), np.sin(lin_xfm[2])],
-                        [-np.sin(lin_xfm[2]), np.cos(lin_xfm[2])]])
-        shear = np.array([[1, 0], [lin_xfm[3], 1]])
-        transf_matrix = scale @ rot @ shear
+        ## scaling
+        sx, sy, sz = lin_xfm[:3]
+
+        scale_mat = np.array(
+            [[sx, 0, 0],
+             [0, sy, 0],
+             [0, 0, sz]])
+
+        ## rotation
+        phi, theta, xi = lin_xfm[3:6]
+        
+        roll = np.array([[1, 0, 0],
+                         [0, np.cos(phi), -np.sin(phi)], 
+                         [0, np.sin(phi), np.cos(phi)]])
+        pitch = np.array([[np.cos(theta), 0, np.sin(theta)],
+                          [0, 1, 0],
+                          [-np.sin(theta), 0, np.cos(theta)]])
+        yaw = np.array([[np.cos(xi), -np.sin(phi), 0],
+                        [np.sin(xi), np.cos(xi), 0],
+                        [0, 0, 1]])
+        
+        rot_mat = roll @ pitch @ yaw
+        
+        ## Shear
+        a, b, c = lin_xfm[6:9]
+
+        xy_shear = np.array(
+            [[1, 0, a],
+             [0, 1, b],
+             [0, 0, 1]])
+        xz_shear = np.array(
+            [[1, a, 0],
+             [0, 1, 0],
+             [0, c, 1]])
+        yz_shear = np.array(
+            [[1, 0, 0],
+             [b, 1, 0],
+             [c, 0, 1]])
+        shear_mat = xy_shear @ xz_shear @ yz_shear
+
+        transf_matrix = scale_mat @ rot_mat @shear_mat
+
+        tx, ty, tz = lin_xfm[9:]
         transf_img = ndi.interpolation.affine_transform(
-            self.im_mov, transf_matrix, offset=[lin_xfm[4], lin_xfm[5]])
+            self.im_mov, transf_matrix, offset=[tx, ty, tz])
         return transf_img
 
     def est_transf(self, method='Powell'):
         """ Estimate linear transform to align `im_mov` to `im_ref` and 
         return the transform parameters. """
-        initial_guess = np.array([1, 1, 0, 0, 0, 0], np.float32)
+        initial_guess = np.array(
+            [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], np.float32)
         result = optimize.minimize(
             self.error_transf, initial_guess, method=method, options={'disp': True})
         return result.x
@@ -103,6 +144,7 @@ class NonLinearTransform(Transform):
         """ Estimate non-linear transform to align `im_mov` to `im_ref` and 
         return the transform parameters. """
         pass
+
 
 def seg_atlas(im, atlas_ct_list, atlas_seg_list):
     """ Apply atlas-based segmentation of `im` using the list of CT images in `atlas_ct_list` and
