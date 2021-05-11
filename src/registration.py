@@ -14,12 +14,8 @@ class Transform():
         super().__init__()
         self.im_ref = sitk.ReadImage(im_ref_filename)
         self.im_mov = sitk.ReadImage(im_mov_filename)
-
-class LinearTransform(Transform):
-    def __init__(self, im_ref_filename, im_mov_filename):
-        super().__init__(im_ref_filename, im_mov_filename)
-
-    def apply_transf(self, lin_xfm, interp=Interpolater.LINEAR):
+    
+    def apply_transf(self, transformation, interp=Interpolater.LINEAR):
         """ Apply given linear transform `lin_xfm` to `self.im_mov` and 
         return the transformed image. """
         
@@ -28,11 +24,17 @@ class LinearTransform(Transform):
         resampler.SetReferenceImage(self.im_ref)
         # Use an interpolator
         resampler.SetInterpolator(interp.value)
-        # Set the transformation 'lin_xfm'
-        resampler.SetTransform(lin_xfm)
+        # Set the transformation 'transformation'
+        resampler.SetTransform(transformation)
         trans_im_mov = resampler.Execute(self.im_mov)
 
         return trans_im_mov
+
+class LinearTransform(Transform):
+    def __init__(self, im_ref_filename, im_mov_filename):
+        super().__init__(im_ref_filename, im_mov_filename)
+
+
 
     def est_transf(self, fix_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=100, gradient_descent_step=1, conv_min_value=1e-6):
         """ Estimate linear transform to align `self.im_mov` to `self.im_ref` and 
@@ -173,8 +175,3 @@ class NonLinearTransform(Transform):
             registration_method.GetOptimizerIteration()))
         print("--------")
         return final_transform
-
-    def apply_transf(self, method='Powell'):
-        """ Estimate non-linear transform to align `im_mov` to `im_ref` and 
-        return the transform parameters. """
-        pass
