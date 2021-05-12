@@ -29,14 +29,25 @@ class Transform():
         trans_im_mov = resampler.Execute(self.im_mov)
 
         return trans_im_mov
+    @staticmethod
+    def create_mask_of_interest(mask_name, labels, verbose=True):
+        mask = sitk.ReadImage(mask_name)
+        mask_of_interest = (mask == labels[0])
+        for label in labels[1:]:
+            mask_of_interest += (mask == label)
+        if verbose:
+            imageSize = mask_of_interest.GetSize()
+            mask_of_interest_data = sitk.GetArrayFromImage(mask_of_interest)
+            plt.figure()
+            plt.imshow(mask_of_interest_data[:, imageSize[1]//2, :], cmap="gray")
+            plt.show()
+        return mask_of_interest
 
 class LinearTransform(Transform):
     def __init__(self, im_ref_filename, im_mov_filename):
         super().__init__(im_ref_filename, im_mov_filename)
 
-
-
-    def est_transf(self, fix_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=100, gradient_descent_step=1, conv_min_value=1e-6):
+    def est_transf(self, fix_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=100, gradient_descent_step=1, conv_min_value=1e-6, verbose=True):
         """ Estimate linear transform to align `self.im_mov` to `self.im_ref` and 
         return the transform parameters. """
 
@@ -74,28 +85,30 @@ class LinearTransform(Transform):
         registration_method.SetOptimizerScalesFromPhysicalShift()
 
         # Set the initial transformation
-        registration_method.SetInitialTransform(initial_transform, inPlace=False)
+        registration_method.SetInitialTransform(initial_transform)
 
         # Connect all of the observers so that we can perform plotting during registration.
-        registration_method.AddCommand(sitk.sitkStartEvent, start_plot)
-        registration_method.AddCommand(sitk.sitkEndEvent, end_plot)
-        registration_method.AddCommand(
-            sitk.sitkMultiResolutionIterationEvent, update_multires_iterations)
-        registration_method.AddCommand(
-            sitk.sitkIterationEvent, lambda: plot_values(registration_method))
+        if verbose:
+            registration_method.AddCommand(sitk.sitkStartEvent, start_plot)
+            registration_method.AddCommand(sitk.sitkEndEvent, end_plot)
+            registration_method.AddCommand(
+                sitk.sitkMultiResolutionIterationEvent, update_multires_iterations)
+            registration_method.AddCommand(
+                sitk.sitkIterationEvent, lambda: plot_values(registration_method))
 
         # perform registration
         final_transform = registration_method.Execute(sitk.Cast(self.im_ref, sitk.sitkFloat32),
                                                     sitk.Cast(self.im_mov, sitk.sitkFloat32))
 
-        # Print transformation parameters
-        print(final_transform)
-        print("--------")
-        print('Final metric value: {0}'.format(
-            registration_method.GetMetricValue()))
-        print('Optimizer\'s stopping condition, {0}'.format(
-            registration_method.GetOptimizerStopConditionDescription()))
-        print("--------")
+        if verbose:
+            # Print transformation parameters
+            print(final_transform)
+            print("--------")
+            print('Final metric value: {0}'.format(
+                registration_method.GetMetricValue()))
+            print('Optimizer\'s stopping condition, {0}'.format(
+                registration_method.GetOptimizerStopConditionDescription()))
+            print("--------")
 
         return final_transform
 
@@ -104,7 +117,7 @@ class NonLinearTransform(Transform):
     def __init__(self, im_ref_filename, im_mov_filename):
         super().__init__(im_ref_filename, im_mov_filename)
 
-    def est_transf(self, fix_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=100, gradient_descent_step=1, conv_min_value=1e-6, fixed_points=None, moving_points=None):
+    def est_transf(self, fix_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=100, gradient_descent_step=1, conv_min_value=1e-6, fixed_points=None, moving_points=None, verbose=True):
         """
         Estimate non-linear transform to align `im_mov` to `im_ref` and
         return the transform parameters.
@@ -167,11 +180,12 @@ class NonLinearTransform(Transform):
         final_transform = registration_method.Execute(
             sitk.Cast(self.im_ref, sitk.sitkFloat32), sitk.Cast(self.im_mov, sitk.sitkFloat32))
 
-        print(final_transform)
-        print("--------")
-        print("Optimizer stop condition: {0}".format(
-            registration_method.GetOptimizerStopConditionDescription()))
-        print("Number of iterations: {0}".format(
-            registration_method.GetOptimizerIteration()))
-        print("--------")
+        if verbose:
+            print(final_transform)
+            print("--------")
+            print("Optimizer stop condition: {0}".format(
+                registration_method.GetOptimizerStopConditionDescription()))
+            print("Number of iterations: {0}".format(
+                registration_method.GetOptimizerIteration()))
+            print("--------")
         return final_transform
