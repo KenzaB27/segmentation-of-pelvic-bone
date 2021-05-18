@@ -1,5 +1,6 @@
 import numpy as np
 import SimpleITK as sitk
+import registration as reg
 
 def seg_atlas(im, atlas_ct_list, atlas_seg_list):
     """ Apply atlas-based segmentation of `im` using the list of CT images in `atlas_ct_list` and
@@ -51,5 +52,31 @@ class AtlasSegmentation():
             self.grp_mask.append(grp_mask)
             self.grp_mask_data.append(grp_mask_data)
 
-    def majority_voting(self, reg_masks):
+
+        #Take one image from "common" as the reference image
+        ref_image = self.cmn_img[0]
+        ref_mask = self.cmn_mask[0]
+
+        #Register the CT images in "group" to that reference
+        #reg.LinearTransform(im_ref_filename=COMMON_PATH + '40_image.nii.gz',im_mov_filename=COMMON_PATH + '42_image.nii.gz')
+
+    def majority_voting(self,reg_masks):
+
+        #Getting arrays from masks
+        reg_mask_arrays = []
+        for mask in reg_masks:
+            reg_mask_arrays.append(sitk.GetArrayFromImage(mask))
+
+        #Checking if 2 out of 3 agree
+        majority_mask = reg_mask_arrays[0] + reg_mask_arrays[1] + reg_mask_arrays[2]
+        majority_mask = np.where(majority_mask>=2, 1, 0)
+
+        #Returning majority mask
+        return  sitk.GetImageFromArray(majority_mask)
+
+
+
+
+
+
         pass
