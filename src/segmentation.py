@@ -43,13 +43,36 @@ class AtlasSegmentation():
 
     def majority_voting(self, reg_masks):
         """Provide the majority voting result for a list of segmented images. The images must be nd-arrays"""
-        pass
+
+        _, height, width = reg_masks[0].shape
+        depth = min([reg_mask.shape[0] for reg_mask in reg_masks])
+
+        min_reg_masks = [reg_mask[:depth, :, :] for reg_mask in reg_masks]
+        labels = np.unique(reg_masks[0][:depth, :, :]) # double check
+        result = np.zeros((depth, height, width))
+        
+        for label in labels:
+            majority_class = []
+            for i, reg_mask in enumerate(min_reg_masks):
+                majority_class.append(np.ndarray.flatten(reg_mask))
+                majority_class[i][majority_class[i] != label] = 0
+                majority_class[i][majority_class[i] == label] = 1
+
+            majority_class = np.array(majority_class)
+            majority_class = np.sum(majority_class, axis=0)
+            
+            majority_class[majority_class < 2] = 0
+            majority_class[majority_class > 0] = label
+            majority_class = majority_class.reshape([depth, height, width])
+            result[majority_class==label] = label
+
+        return result
 
     def seg_atlas(self, id_cmn):
         """ Apply atlas-based segmentation of `im` using the list of CT images in `atlas_ct_list` and
         the corresponding segmentation masks in `atlas_seg_list`. 
         Return the resulting segmentation mask after majority voting. """
-        reg_mask = []
+        reg_masks = []
         for id_grp in self.grp_img:
             lin_trf = LinearTransform(
                 im_ref=self.cmn_img[id_cmn], im_mov=self.grp_img[id_grp])
@@ -65,6 +88,6 @@ class AtlasSegmentation():
             nl_reg_mask = nl_trf.apply_transf(
                 transformation=nl_xfm, im=lin_reg_mask)
 
-            reg_mask.append(nl_reg_mask)
+            reg_masks.append(sitk.GetArrayFromImage(nl_reg_mask))
 
-        return self.majority_voting(reg_mask)
+        return self.majority_voting(reg_masks)
