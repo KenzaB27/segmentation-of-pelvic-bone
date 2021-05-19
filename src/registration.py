@@ -53,8 +53,8 @@ class Transform():
 
 
 class LinearTransform(Transform):
-    def __init__(self, im_ref_filename, im_mov_filename):
-        super().__init__(im_ref_filename, im_mov_filename)
+    def __init__(self, im_ref_filename, im_mov_filename, im_mov=None, im_ref=None):
+        super().__init__(im_ref_filename, im_mov_filename, im_mov, im_ref)
 
     def est_transf(self, fix_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=100, gradient_descent_step=1, conv_min_value=1e-6, verbose=True):
         """ Estimate linear transform to align `self.im_mov` to `self.im_ref` and 
@@ -125,8 +125,8 @@ class LinearTransform(Transform):
 
 
 class NonLinearTransform(Transform):
-    def __init__(self, im_ref_filename, im_mov_filename):
-        super().__init__(im_ref_filename, im_mov_filename)
+    def __init__(self, im_ref_filename, im_mov_filename, im_mov=None, im_ref=None):
+        super().__init__(im_ref_filename, im_mov_filename, im_mov, im_ref)
 
     def est_transf(self, fix_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=100, gradient_descent_step=1, conv_min_value=1e-6, fixed_points=None, moving_points=None, verbose=True):
         """
