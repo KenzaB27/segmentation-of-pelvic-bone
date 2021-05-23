@@ -72,18 +72,19 @@ class AtlasSegmentation():
         """ Apply atlas-based segmentation of `im` using the list of CT images in `atlas_ct_list` and
         the corresponding segmentation masks in `atlas_seg_list`. 
         Return the resulting segmentation mask after majority voting. """
+
         reg_masks = []
         for id_grp in self.grp_img:
             lin_trf = LinearTransform(
                 im_ref=self.cmn_img[id_cmn], im_mov=self.grp_img[id_grp])
-            lin_xfm = lin_trf.est_transf(metric="MI", num_iter=200)
+            lin_xfm = lin_trf.est_transf(metric="MI", num_iter=200, fix_img_mask=self.grp_mask[id_grp])
             
             lin_reg_img = lin_trf.apply_transf(lin_xfm)
             lin_reg_mask = lin_trf.apply_transf(transformation=lin_xfm, im=self.grp_mask[id_grp])
 
             nl_trf = NonLinearTransform(
                 im_ref=self.cmn_img[id_cmn], im_mov=lin_reg_img)
-            nl_xfm = nl_trf.est_transf(metric="SSD", num_iter=200)
+            nl_xfm = nl_trf.est_transf(metric="SSD", num_iter=200, fix_img_mask=self.grp_mask[id_grp])
 
             nl_reg_mask = nl_trf.apply_transf(
                 transformation=nl_xfm, im=lin_reg_mask)

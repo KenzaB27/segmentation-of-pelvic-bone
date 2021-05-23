@@ -40,7 +40,7 @@ class Transform():
     def create_mask_of_interest(mask_name, labels, verbose=True):
         mask = sitk.ReadImage(mask_name)
         mask_of_interest = (mask == labels[0])
-        for label in labels[1:]:
+        for label in labels[0:]:
             mask_of_interest += (mask == label)
         if verbose:
             imageSize = mask_of_interest.GetSize()
@@ -53,10 +53,10 @@ class Transform():
 
 
 class LinearTransform(Transform):
-    def __init__(self, im_ref_filename, im_mov_filename, im_mov=None, im_ref=None):
+    def __init__(self, im_ref_filename = None, im_mov_filename = None, im_mov=None, im_ref=None):
         super().__init__(im_ref_filename, im_mov_filename, im_mov, im_ref)
 
-    def est_transf(self, fix_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=100, gradient_descent_step=1, conv_min_value=1e-6, verbose=True):
+    def est_transf(self, fix_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=100, gradient_descent_step=1, conv_min_value=1e-6, verbose=False):
         """ Estimate linear transform to align `self.im_mov` to `self.im_ref` and 
         return the transform parameters. """
 
@@ -125,10 +125,10 @@ class LinearTransform(Transform):
 
 
 class NonLinearTransform(Transform):
-    def __init__(self, im_ref_filename, im_mov_filename, im_mov=None, im_ref=None):
+    def __init__(self, im_ref_filename = None, im_mov_filename = None, im_mov=None, im_ref=None):
         super().__init__(im_ref_filename, im_mov_filename, im_mov, im_ref)
 
-    def est_transf(self, fix_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=100, gradient_descent_step=1, conv_min_value=1e-6, fixed_points=None, moving_points=None, verbose=True):
+    def est_transf(self, fix_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=100, gradient_descent_step=1, conv_min_value=1e-6, fixed_points=None, moving_points=None, verbose=False):
         """
         Estimate non-linear transform to align `im_mov` to `im_ref` and
         return the transform parameters.
