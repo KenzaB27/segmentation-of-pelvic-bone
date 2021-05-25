@@ -43,12 +43,7 @@ class Transform():
         for label in labels[0:]:
             mask_of_interest += (mask == label)
         if verbose:
-            imageSize = mask_of_interest.GetSize()
-            mask_of_interest_data = sitk.GetArrayFromImage(mask_of_interest)
-            plt.figure()
-            plt.imshow(
-                mask_of_interest_data[:, imageSize[1]//2, :], cmap="gray")
-            plt.show()
+            plot_3d_img_slices(mask_of_interest)
         return mask_of_interest
 
 
