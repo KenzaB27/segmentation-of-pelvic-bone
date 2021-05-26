@@ -47,6 +47,19 @@ class Transform():
         return mask_of_interest
 
 
+    #Maintains lable name
+    def create_mask_of_interest2(mask_image, labels, verbose=True):
+        mask= sitk.GetArrayFromImage(mask_image)
+        mask_of_interest = np.zeros(mask.shape)
+        for label in labels:
+            mask_of_interest[mask==label] = label
+
+        mask_of_interest = sitk.GetImageFromArray(mask_of_interest)
+
+        if verbose:
+            plot_3d_img_slices(mask_of_interest)
+        return mask_of_interest
+
 class LinearTransform(Transform):
     def __init__(self, im_ref_filename = None, im_mov_filename = None, im_mov=None, im_ref=None):
         super().__init__(im_ref_filename, im_mov_filename, im_mov, im_ref)

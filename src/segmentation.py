@@ -2,11 +2,11 @@ import numpy as np
 import SimpleITK as sitk
 from registration import LinearTransform, NonLinearTransform, Transform
 
-CMN_IMG_PATH = "../data/COMMON_images_masks/common_{0}_image.nii.gz"
-CMN_MASK_PATH = "../data/COMMON_images_masks/common_{0}_mask.nii.gz"
+CMN_IMG_PATH = "../data/resampled_images_256/{}_image.nii"
+CMN_MASK_PATH = "../data/resampled_images_256/{}_mask.nii"
 
-GRP_IMG_PATH = "../data/g3_{0}_image.nii.gz"
-GRP_MASK_PATH = "../data/g3_{0}_mask.nii.gz"
+GRP_IMG_PATH = "../data/resampled_images_256/{}_image.nii"
+GRP_MASK_PATH = "../data/resampled_images_256/{}_mask.nii"
 
 class AtlasSegmentation():
     def __init__(self):
@@ -48,7 +48,8 @@ class AtlasSegmentation():
         depth = min([reg_mask.shape[0] for reg_mask in reg_masks])
 
         min_reg_masks = [reg_mask[:depth, :, :] for reg_mask in reg_masks]
-        labels = np.unique(reg_masks[0][:depth, :, :]) # double check
+        #labels = np.unique(reg_masks[0][:depth, :, :]) # double check
+        labels = [0, 1, 2, 3, 4, 5]
         result = np.zeros((depth, height, width))
         
         for label in labels:

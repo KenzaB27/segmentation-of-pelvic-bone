@@ -4,6 +4,15 @@ from scipy import linalg
 import SimpleITK as sitk
 import numpy as np
 
+def save_image(image, fileName):
+
+    writer = sitk.ImageFileWriter()
+    writer.SetImageIO("NiftiImageIO")
+    writer.SetFileName(fileName)
+    writer.Execute(image)
+
+    return True
+
 
 def read_image(file_name):
     img = sitk.ReadImage(file_name)
@@ -12,8 +21,9 @@ def read_image(file_name):
 
 
 def plot_3d_img_slices(img, cmap="gray"):
-    imageSize = img.GetSize()
+    #imageSize = img.GetSize()
     img_data = sitk.GetArrayFromImage(img)
+    imageSize = img_data.shape
     plt.figure(figsize=(12, 8))
     plt.subplot(131)
     plt.imshow(img_data[int(imageSize[0]/2), :, :], cmap=cmap)
@@ -29,9 +39,10 @@ def plot_3d_img_slices(img, cmap="gray"):
 
 def plot_3d_img_masked(img, mask, alpha=0.3):
 
-    imageSize = img.GetSize()
+    #imageSize = img.GetSize()
     img_data = sitk.GetArrayFromImage(img)
     mask_data = sitk.GetArrayFromImage(mask)
+    imageSize = img_data.shape
 
     plt.figure(figsize=(12, 8))
     plt.subplot(131)
@@ -282,3 +293,86 @@ def registration_errors(tx, reference_fixed_point_list, reference_moving_point_l
       plt.show()
 
   return (np.mean(errors), np.std(errors), min_errors, max_errors, errors)
+
+
+def create_ref_domain(images):
+    dimension = images[0].GetDimension()
+
+    # Physical image size corresponds to the largest physical size in the training set, or any other arbitrary size.
+    reference_physical_size = np.zeros(dimension)
+    for img in images:
+        reference_physical_size[:] = [(sz - 1) * spc if sz * spc > mx else mx for sz, spc, mx in
+                                      zip(img.GetSize(), img.GetSpacing(), reference_physical_size)]
+
+    # Create the reference image with a zero origin, identity direction cosine matrix and dimension
+    reference_origin = np.zeros(dimension)
+    reference_direction = np.identity(dimension).flatten()
+
+    # Select arbitrary number of pixels per dimension, smallest size that yields desired results
+    # or the required size of a pretrained network (e.g. VGG-16 224x224), transfer learning. This will
+    # often result in non-isotropic pixel spacing.
+    reference_size = [256,256,128] #* dimension
+    reference_spacing = [phys_sz / (sz - 1) for sz, phys_sz in zip(reference_size, reference_physical_size)]
+
+
+    # Note, if we get problems with the masks then maybe this is a good idea!
+
+    # Another possibility is that you want isotropic pixels, then you can specify the image size for one of
+    # the axes and the others are determined by this choice. Below we choose to set the x axis to 128 and the
+    # spacing set accordingly.
+    # Uncomment the following lines to use this strategy.
+    # reference_size_x = 128
+    # reference_spacing = [reference_physical_size[0]/(reference_size_x-1)]*dimension
+    # reference_size = [int(phys_sz/(spc) + 1) for phys_sz,spc in zip(reference_physical_size, reference_spacing)]
+
+    reference_image = sitk.Image(reference_size, images[0].GetPixelIDValue())
+    reference_image.SetOrigin(reference_origin)
+    reference_image.SetSpacing(reference_spacing)
+    reference_image.SetDirection(reference_direction)
+
+    # Always use the TransformContinuousIndexToPhysicalPoint to compute an indexed point's physical coordinates as
+    # this takes into account size, spacing and direction cosines. For the vast majority of images the direction
+    # cosines are the identity matrix, but when this isn't the case simply multiplying the central index by the
+    # spacing will not yield the correct coordinates resulting in a long debugging session.
+    reference_center = np.array(
+        reference_image.TransformContinuousIndexToPhysicalPoint(np.array(reference_image.GetSize()) / 2.0))
+
+    return [reference_image, reference_center]
+
+
+def resample_all_images(images, masks):
+    #modified_data = [threshold_based_crop(img) for img in images]
+    #images = modified_data
+
+    [reference_image, reference_center] = create_ref_domain(images)
+    resampled_images = []
+    resampled_masks = []
+    for image, mask in zip(images,masks):
+        transform = sitk.CenteredTransformInitializer(reference_image,
+                                                          image,
+                                                          sitk.Euler3DTransform(),
+                                                          sitk.CenteredTransformInitializerFilter.GEOMETRY)
+        resampled_images.append(sitk.Resample(image, reference_image, transform, sitk.sitkLinear, 0.0, image.GetPixelID()))
+        resampled_masks.append(sitk.Resample(mask, reference_image, transform, sitk.sitkNearestNeighbor, 0.0, image.GetPixelID()))
+    return [resampled_images, resampled_masks]
+
+
+def threshold_based_crop(image):
+    '''
+    Use Otsu's threshold estimator to separate background and foreground. In medical imaging the background is
+    usually air. Then crop the image using the foreground's axis aligned bounding box.
+    Args:
+        image (SimpleITK image): An image where the anatomy and background intensities form a bi-modal distribution
+                                 (the assumption underlying Otsu's method.)
+    Return:
+        Cropped image based on foreground's axis aligned bounding box.
+    '''
+    # Set pixels that are in [min_intensity,otsu_threshold] to inside_value, values above otsu_threshold are
+    # set to outside_value. The anatomy has higher intensity values than the background, so it is outside.
+    inside_value = 0
+    outside_value = 255
+    label_shape_filter = sitk.LabelShapeStatisticsImageFilter()
+    label_shape_filter.Execute( sitk.OtsuThreshold(image, inside_value, outside_value) )
+    bounding_box = label_shape_filter.GetBoundingBox(outside_value)
+    # The bounding box's first "dim" entries are the starting index and last "dim" entries the size
+    return sitk.RegionOfInterest(image, bounding_box[int(len(bounding_box)/2):], bounding_box[0:int(len(bounding_box)/2)])
