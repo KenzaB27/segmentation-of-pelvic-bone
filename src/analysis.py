@@ -32,8 +32,8 @@ class PelvicData():
 
                 self.grp_img[grp_indices[i]] = sitk.GetArrayFromImage(grp_img)
                 self.cmn_img[cmn_indices[i]] = sitk.GetArrayFromImage(cmn_img)
-                self.cmn_img_3c[cmn_indices[i]] = np.repeat(
-                    self.cmn_img[cmn_indices[i]][None, ...], 3, axis=0).T
+                self.cmn_img_3c[cmn_indices[i]] = np.array(
+                    [np.repeat(x[None, ...], 3, axis=0).T for x in self.cmn_img[cmn_indices[i]]])
 
             self.X_train = np.concatenate(list(self.grp_img.values()), axis=0)
 
