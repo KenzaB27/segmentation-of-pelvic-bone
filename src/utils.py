@@ -39,7 +39,7 @@ def plot_3d_img_slices(img, cmap="gray"):
 
 def plot_3d_img_masked(img, mask, alpha=0.3):
 
-    imageSize = img.GetSize()
+    #imageSize = img.GetSize()
     img_data = sitk.GetArrayFromImage(img)
     mask_data = sitk.GetArrayFromImage(mask)
     imageSize = img_data.shape
