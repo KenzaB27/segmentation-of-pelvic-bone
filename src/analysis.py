@@ -4,32 +4,17 @@ import tensorflow as tf
 import numpy as np
 import cv2
 
-CMN_IMG_PATH = "../data/COMMON_images_masks/common_{0}_image.nii.gz"
+CMN_IMG_PATH = "data/COMMON_images_masks/common_{0}_image.nii.gz"
 
-GRP_IMG_PATH = "../data/g3_{0}_image.nii.gz"
+GRP_IMG_PATH = "data/g3_{0}_image.nii.gz"
 
 LABELS = {59: {"size": 275, "pos": (63, 89)},
           60: {"size": 241, "pos": (52, 84)},
           61: {"size": 339, "pos": (97, 138)}}
 N_IMG = 276 + 242 + 340
 
-
-def whitening(image):
-    """Whitening. Normalises image to zero mean and unit variance."""
-
-    image = image.astype(np.float32)
-
-    mean = np.mean(image)
-    std = np.std(image)
-
-    if std > 0:
-        ret = (image - mean) / std
-    else:
-        ret = image * 0.
-    return ret
-
 class PelvicData():
-    def __init__(self, X_train_3C=None, X_train=None, y_train=None):
+    def __init__(self, X_train_3C=None, X_train=None, y_train=None, root_path="../"):
         if X_train_3C is None and y_train is None:
             grp_indices = [59, 60, 61]
             cmn_indices = [40, 41, 42]
@@ -39,9 +24,9 @@ class PelvicData():
 
             for i in range(len(cmn_indices)):
                 grp_img = sitk.ReadImage(
-                    GRP_IMG_PATH.format(grp_indices[i]))
+                    root_path + GRP_IMG_PATH.format(grp_indices[i]))
                 cmn_img = sitk.ReadImage(
-                    CMN_IMG_PATH.format(cmn_indices[i]))
+                    root_path + CMN_IMG_PATH.format(cmn_indices[i]))
 
                 self.grp_img[grp_indices[i]] = sitk.GetArrayFromImage(grp_img)
                 self.cmn_img[cmn_indices[i]] = sitk.GetArrayFromImage(cmn_img)
