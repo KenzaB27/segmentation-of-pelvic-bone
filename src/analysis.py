@@ -29,8 +29,8 @@ def whitening(image):
     return ret
 
 class PelvicData():
-    def __init__(self, train_X_3C=None, train_X=None, train_y=None):
-        if train_X_3C is None and train_y is None:
+    def __init__(self, X_train_3C=None, X_train=None, y_train=None):
+        if X_train_3C is None and y_train is None:
             grp_indices = [59, 60, 61]
             cmn_indices = [40, 41, 42]
 
@@ -46,25 +46,21 @@ class PelvicData():
                 self.grp_img[grp_indices[i]] = sitk.GetArrayFromImage(grp_img)
                 self.cmn_img[cmn_indices[i]] = sitk.GetArrayFromImage(cmn_img)
 
-            self.train_X = np.concatenate(list(self.grp_img.values()), axis=0)
+            self.X_train = np.concatenate(list(self.grp_img.values()), axis=0)
 
-            self.train_X_3C = np.array(
-                [np.repeat(x[None, ...], 3, axis=0).T for x in self.train_X])
+            self.X_train_3C = np.array(
+                [np.repeat(x[None, ...], 3, axis=0).T for x in self.X_train])
 
-            self.train_y = np.zeros(N_IMG)
+            self.y_train = np.zeros(N_IMG)
 
             i = 0
             for _, v in LABELS.items():
-                self.train_y[i+v["pos"][0]:i+v["pos"][1]+1] = 1
+                self.y_train[i+v["pos"][0]:i+v["pos"][1]+1] = 1
                 i += v['size']
         else:
-            self.train_X_3C = train_X_3C
-            self.train_y = train_y
-            self.train_X = train_X
-        
-
-        
-
+            self.X_train_3C = X_train_3C
+            self.y_train = y_train
+            # self.X_train = X_train
 
 def train_classifier(im_list, labels_list):
     """ Receive a list of images `im_list` and a list of vectors (one per image) with the labels 0 or 1 depending on the sagittal 
