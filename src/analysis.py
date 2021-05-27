@@ -39,9 +39,8 @@ class PelvicData():
                 root_path + CMN_IMG_PATH.format(cmn_indices[i]))
 
             self.grp_img[grp_indices[i]] = sitk.GetArrayFromImage(grp_img)[
-                LABELS[cmn_indices[i]-50: cmn_indices[i]+70]]
-            self.cmn_img[cmn_indices[i]] = sitk.GetArrayFromImage(cmn_img)[
-                LABELS[cmn_indices[i]-50: cmn_indices[i]+70]]
+                LABELS[grp_indices[i]-50: grp_indices[i]+70]]
+            self.cmn_img[cmn_indices[i]] = sitk.GetArrayFromImage(cmn_img)
             self.cmn_img_3c[cmn_indices[i]] = np.array(
                 [np.repeat(x[None, ...], 3, axis=0).T for x in self.cmn_img[cmn_indices[i]]])
 
