@@ -45,8 +45,7 @@ class PelvicData():
 
         self.X_train = np.concatenate(list(self.grp_img.values()), axis=0)
         
-        ## Preprocess data (clip + scale 0-1)
-        self.X_train = np.clip(self.X_train, -125, 275)
+        ## Preprocess data (scale 0-1)
         self.X_train, self.X_val, self.y_train, self.y_val = train_test_split(
             self.X_train, self.y_train, test_size=split, random_state=42, stratify=self.y_train)
 
