@@ -50,7 +50,7 @@ class PelvicData():
             self.X_train, self.y_train, test_size=split, random_state=42, stratify=self.y_train)
 
         self.X_flat_train = np.array([x.flatten() for x in self.X_train])
-        self.scaler = Normalizer()
+        self.scaler = StandardScaler()
         self.scaler.fit(self.X_flat_train)
         self.X_flat_train = self.scaler.transform(self.X_flat_train)
 
