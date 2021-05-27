@@ -15,7 +15,7 @@ LABELS = {59: {"size": 275, "pos": (63, 89)},
 N_IMG = 276 + 242 + 340
 
 class PelvicData():
-    def __init__(self, root_path="../", split=0.1):
+    def __init__(self, root_path="../", split=0.05):
         
         grp_indices = [59, 60, 61]
         cmn_indices = [40, 41, 42]
@@ -38,8 +38,10 @@ class PelvicData():
             cmn_img = sitk.ReadImage(
                 root_path + CMN_IMG_PATH.format(cmn_indices[i]))
 
-            self.grp_img[grp_indices[i]] = sitk.GetArrayFromImage(grp_img)
-            self.cmn_img[cmn_indices[i]] = sitk.GetArrayFromImage(cmn_img)
+            self.grp_img[grp_indices[i]] = sitk.GetArrayFromImage(grp_img)[
+                LABELS[cmn_indices[i]-50: cmn_indices[i]+70]]
+            self.cmn_img[cmn_indices[i]] = sitk.GetArrayFromImage(cmn_img)[
+                LABELS[cmn_indices[i]-50: cmn_indices[i]+70]]
             self.cmn_img_3c[cmn_indices[i]] = np.array(
                 [np.repeat(x[None, ...], 3, axis=0).T for x in self.cmn_img[cmn_indices[i]]])
 
