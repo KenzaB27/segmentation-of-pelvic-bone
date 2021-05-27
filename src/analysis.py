@@ -1,4 +1,5 @@
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
 import SimpleITK as sitk
 import tensorflow as tf
 import numpy as np
@@ -14,42 +15,62 @@ LABELS = {59: {"size": 275, "pos": (63, 89)},
 N_IMG = 276 + 242 + 340
 
 class PelvicData():
-    def __init__(self, X_train_3C=None, X_train=None, y_train=None, root_path="../"):
-        if X_train_3C is None and y_train is None:
-            grp_indices = [59, 60, 61]
-            cmn_indices = [40, 41, 42]
+    def __init__(self, root_path="../", split=0.1):
+        
+        grp_indices = [59, 60, 61]
+        cmn_indices = [40, 41, 42]
 
-            self.grp_img = {}
-            self.cmn_img = {}
-            self.cmn_img_3c = {}
+        ## Create Labels
+        i = 0
+        self.y_train = np.zeros(N_IMG)
+        for _, v in LABELS.items():
+            self.y_train[i+v["pos"][0]:i+v["pos"][1]+1] = 1
+            i += v['size']
+
+        ## Create Features
+        self.grp_img = {}
+        self.cmn_img = {}
+        self.cmn_img_3c = {}
+
+        for i in range(len(cmn_indices)):
+            grp_img = sitk.ReadImage(
+                root_path + GRP_IMG_PATH.format(grp_indices[i]))
+            cmn_img = sitk.ReadImage(
+                root_path + CMN_IMG_PATH.format(cmn_indices[i]))
+
+            self.grp_img[grp_indices[i]] = sitk.GetArrayFromImage(grp_img)
+            self.cmn_img[cmn_indices[i]] = sitk.GetArrayFromImage(cmn_img)
+            self.cmn_img_3c[cmn_indices[i]] = np.array(
+                [np.repeat(x[None, ...], 3, axis=0).T for x in self.cmn_img[cmn_indices[i]]])
+
+        self.X_train = np.concatenate(list(self.grp_img.values()), axis=0)
+        
+        ## Preprocess data (clip + scale 0-1)
+        self.X_train = np.clip(self.X_train, -125, 275)
+        self.X_train, self.X_val, self.y_train, self.y_val = train_test_split(
+            self.X_train, self.y_train, test_size=split, random_state=42, stratify=self.y_train)
+
+        self.X_flat_train = np.array([x.flatten() for x in self.X_train])
+        self.scaler = MinMaxScaler()
+        self.scaler.fit(self.X_flat_train)
+        self.X_flat_train = self.scaler.transform(self.X_flat_train)
+
+        self.X_flat_val = np.array([x.flatten() for x in self.X_val])
+        self.X_flat_val = self.scaler.transform(self.X_flat_val)
+
+        self.X_train = self.X_flat_train.reshape(self.X_train.shape)
+        self.X_val = self.X_flat_val.reshape(self.X_val.shape)
+
+        self.X_train_3C = np.array(
+            [np.repeat(x[None, ...], 3, axis=0).T for x in self.X_train])
+        self.X_val_3C = np.array(
+            [np.repeat(x[None, ...], 3, axis=0).T for x in self.X_val])
 
 
-            for i in range(len(cmn_indices)):
-                grp_img = sitk.ReadImage(
-                    root_path + GRP_IMG_PATH.format(grp_indices[i]))
-                cmn_img = sitk.ReadImage(
-                    root_path + CMN_IMG_PATH.format(cmn_indices[i]))
 
-                self.grp_img[grp_indices[i]] = sitk.GetArrayFromImage(grp_img)
-                self.cmn_img[cmn_indices[i]] = sitk.GetArrayFromImage(cmn_img)
-                self.cmn_img_3c[cmn_indices[i]] = np.array(
-                    [np.repeat(x[None, ...], 3, axis=0).T for x in self.cmn_img[cmn_indices[i]]])
+            
+            
 
-            self.X_train = np.concatenate(list(self.grp_img.values()), axis=0)
-
-            self.X_train_3C = np.array(
-                [np.repeat(x[None, ...], 3, axis=0).T for x in self.X_train])
-
-            self.y_train = np.zeros(N_IMG)
-
-            i = 0
-            for _, v in LABELS.items():
-                self.y_train[i+v["pos"][0]:i+v["pos"][1]+1] = 1
-                i += v['size']
-        else:
-            self.X_train_3C = X_train_3C
-            self.y_train = y_train
-            # self.X_train = X_train
 
 def train_classifier(im_list, labels_list):
     """ Receive a list of images `im_list` and a list of vectors (one per image) with the labels 0 or 1 depending on the sagittal 
