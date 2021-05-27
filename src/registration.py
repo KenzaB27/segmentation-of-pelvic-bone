@@ -19,6 +19,7 @@ class Transform():
             self.im_mov = im_mov
             self.im_ref = im_ref
 
+
     def apply_transf(self, transformation, interp=Interpolater.LINEAR, im=None):
         """ Apply given linear transform `lin_xfm` to `self.im_mov` and 
         return the transformed image. """
@@ -37,13 +38,17 @@ class Transform():
         return trans_im_mov
 
     @staticmethod
-    def create_mask_of_interest(mask_name, labels, verbose=True):
+    def create_mask_of_interest(mask_name, labels, verbose=False):
         mask = sitk.ReadImage(mask_name)
         mask_of_interest = (mask == labels[0])
-        for label in labels[0:]:
+        plot_3d_img_slices(mask_of_interest)
+        for label in labels[1:]:
             mask_of_interest += (mask == label)
         if verbose:
             plot_3d_img_slices(mask_of_interest)
+
+        for label in labels[1:]:
+            mask_of_interest += (mask == label)
         return mask_of_interest
 
 
@@ -64,7 +69,7 @@ class LinearTransform(Transform):
     def __init__(self, im_ref_filename = None, im_mov_filename = None, im_mov=None, im_ref=None):
         super().__init__(im_ref_filename, im_mov_filename, im_mov, im_ref)
 
-    def est_transf(self, fix_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=100, gradient_descent_step=1, conv_min_value=1e-6, verbose=False):
+    def est_transf(self, fix_img_mask=None, mov_img_mask=None , metric='MI', interp=Interpolater.LINEAR, num_iter=200, gradient_descent_step=1, conv_min_value=1e-6, verbose=True):
         """ Estimate linear transform to align `self.im_mov` to `self.im_ref` and 
         return the transform parameters. """
 
@@ -89,18 +94,19 @@ class LinearTransform(Transform):
 
         registration_method.SetMetricSamplingStrategy(
             registration_method.RANDOM)
-        registration_method.SetMetricSamplingPercentage(0.01)
+        registration_method.SetMetricSamplingPercentage(0.1)
 
         # Mask information
         if fix_img_mask:
             registration_method.SetMetricFixedMask(fix_img_mask)
-
+        if mov_img_mask:
+            registration_method.SetMetricMovingMask(mov_img_mask)
         # interpolator
         registration_method.SetInterpolator(interp.value)
 
         # Gradient descent optimizer
         registration_method.SetOptimizerAsGradientDescent(
-            learningRate=gradient_descent_step, numberOfIterations=num_iter, convergenceMinimumValue=conv_min_value, convergenceWindowSize=10)
+            learningRate=gradient_descent_step, numberOfIterations=num_iter, convergenceMinimumValue=conv_min_value, convergenceWindowSize=20)
         registration_method.SetOptimizerScalesFromPhysicalShift()
 
         # Set the initial transformation
@@ -136,7 +142,7 @@ class NonLinearTransform(Transform):
     def __init__(self, im_ref_filename = None, im_mov_filename = None, im_mov=None, im_ref=None):
         super().__init__(im_ref_filename, im_mov_filename, im_mov, im_ref)
 
-    def est_transf(self, fix_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=100, gradient_descent_step=1, conv_min_value=1e-6, fixed_points=None, moving_points=None, verbose=False):
+    def est_transf(self, fix_img_mask=None, mov_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=200, gradient_descent_step=1, conv_min_value=1e-6, fixed_points=None, moving_points=None, verbose=True):
         """
         Estimate non-linear transform to align `im_mov` to `im_ref` and
         return the transform parameters.
@@ -170,10 +176,11 @@ class NonLinearTransform(Transform):
         # whole image.
         registration_method.SetMetricSamplingStrategy(
             registration_method.RANDOM)
-        registration_method.SetMetricSamplingPercentage(0.01)
+        registration_method.SetMetricSamplingPercentage(0.1)
         if fix_img_mask:
             registration_method.SetMetricFixedMask(fix_img_mask)
-
+        if mov_img_mask:
+            registration_method.SetMetricMovingMask(mov_img_mask)
         # Multi-resolution framework.
         registration_method.SetShrinkFactorsPerLevel(shrinkFactors=[4, 2, 1])
         registration_method.SetSmoothingSigmasPerLevel(

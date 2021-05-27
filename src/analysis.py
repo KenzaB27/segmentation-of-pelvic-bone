@@ -98,7 +98,7 @@ def dice_analysis(mask, ref_mask):
     overlap_measures_filter.Execute(ref_mask, mask)
     result = overlap_measures_filter.GetDiceCoefficient()
 
-    print(result)
+    #print(result)
     return result
 
 
@@ -114,5 +114,5 @@ def hausdorf_distance_analysis(mask, ref_mask):
 
     hausdorff_distance_filter.Execute(ref_mask, mask)
     result = hausdorff_distance_filter.GetHausdorffDistance()
-    print(result)
+    #print(result)
     return result

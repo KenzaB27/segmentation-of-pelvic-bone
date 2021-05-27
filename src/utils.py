@@ -340,9 +340,13 @@ def create_ref_domain(images):
     return [reference_image, reference_center]
 
 
-def resample_all_images(images, masks):
-    #modified_data = [threshold_based_crop(img) for img in images]
-    #images = modified_data
+def resample_all_images(images1, masks1):
+    images = []
+    masks = []
+    for img, mask in zip(images1 , masks1):
+        [image, mask] = threshold_based_crop(img, mask)
+        images.append(image)
+        masks.append(mask)
 
     [reference_image, reference_center] = create_ref_domain(images)
     resampled_images = []
@@ -357,7 +361,7 @@ def resample_all_images(images, masks):
     return [resampled_images, resampled_masks]
 
 
-def threshold_based_crop(image):
+def threshold_based_crop(image, mask):
     '''
     Use Otsu's threshold estimator to separate background and foreground. In medical imaging the background is
     usually air. Then crop the image using the foreground's axis aligned bounding box.
@@ -372,7 +376,9 @@ def threshold_based_crop(image):
     inside_value = 0
     outside_value = 255
     label_shape_filter = sitk.LabelShapeStatisticsImageFilter()
-    label_shape_filter.Execute( sitk.OtsuThreshold(image, inside_value, outside_value) )
+    label_shape_filter.Execute(sitk.OtsuThreshold(image, inside_value, outside_value) )
     bounding_box = label_shape_filter.GetBoundingBox(outside_value)
     # The bounding box's first "dim" entries are the starting index and last "dim" entries the size
-    return sitk.RegionOfInterest(image, bounding_box[int(len(bounding_box)/2):], bounding_box[0:int(len(bounding_box)/2)])
+    image_output = sitk.RegionOfInterest(image, bounding_box[int(len(bounding_box) / 2):], bounding_box[0:int(len(bounding_box) / 2)])
+    mask_output = sitk.RegionOfInterest(mask, bounding_box[int(len(bounding_box)/2):], bounding_box[0:int(len(bounding_box)/2)])
+    return image_output, mask_output
