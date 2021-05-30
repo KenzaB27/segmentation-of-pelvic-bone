@@ -89,32 +89,27 @@ class AtlasSegmentation():
         reg_masks = []
 
         for id_grp in self.grp_img:
+            # compute linear affine transformation 
             lin_trf = LinearTransform(
                 im_ref=self.cmn_img[id_cmn], im_mov=self.grp_img[id_grp])
             lin_xfm = lin_trf.est_transf(metric="MI", num_iter=200, fix_img_mask=foreground_mask) #, mov_img_mask=self.grp_mask[id_grp], fix_img_mask=self.cmn_mask[id_cmn]
-
-           # lin_reg_img = lin_trf.apply_transf(lin_xfm)
+            # apply it to group image and its mask 
             lin_reg_img  = sitk.Resample(self.grp_img[id_grp], self.cmn_img[id_cmn], lin_xfm, sitk.sitkLinear, 0.0,
                                         self.grp_img[id_grp].GetPixelID())
-
-            #lin_reg_mask = lin_trf.apply_transf(transformation=lin_xfm, im=self.grp_mask[id_grp])
             lin_reg_mask = sitk.Resample(self.grp_mask[id_grp], self.cmn_img[id_cmn], lin_xfm, sitk.sitkNearestNeighbor, 0.0,
                                         self.grp_mask[id_grp].GetPixelID())
-
+            # compute FFD transform
             nl_trf = NonLinearTransform(
                 im_ref=self.cmn_img[id_cmn], im_mov=lin_reg_img)
             nl_xfm = nl_trf.est_transf(metric="SSD", num_iter=10 ,  fix_img_mask=foreground_mask)#  fix_img_mask=self.cmn_mask[id_cmn]
-
-           # nl_reg_mask = nl_trf.apply_transf(
-           #    transformation=nl_xfm, im=lin_reg_mask)
+            # apply it to linearly trasformed mask 
             nl_reg_mask = sitk.Resample(lin_reg_mask, self.cmn_img[id_cmn],nl_xfm, sitk.sitkLinear, 0.0, lin_reg_mask.GetPixelID())
 
-            #nl_reg_mask  = sitk.Resample(moving_image, fixed_image, lin_xfm, sitk.sitkNearestNeighbor, 0.0, moving_image.GetPixelID())
-
             reg_masks.append(sitk.GetArrayFromImage(nl_reg_mask))
-            # reg_masks.append(sitk.GetArrayFromImage(lin_reg_mask))
 
         cmn_img = ut.read_image(CMN_IMG_PATH.format(id_cmn))
+
         for mask in reg_masks:
             ut.plot_3d_img_masked(cmn_img, sitk.GetImageFromArray(mask))
+            
         return self.majority_voting(reg_masks)
