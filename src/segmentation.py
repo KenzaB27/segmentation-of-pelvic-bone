@@ -3,7 +3,6 @@ import SimpleITK as sitk
 from registration import LinearTransform, NonLinearTransform, Transform
 import utils as ut
 
-#NEW_PATH = "../data/resampled_images_256/"
 NEW_PATH = "../data/resampled_images_256/"
 CMN_IMG_PATH = NEW_PATH + "{}_image.nii"
 CMN_MASK_PATH = NEW_PATH + "{}_mask.nii"
@@ -78,32 +77,30 @@ class AtlasSegmentation():
         return result
 
     def seg_atlas(self, id_cmn):
-        """ Apply atlas-based segmentation of `im` using the list of CT images in `atlas_ct_list` and
-        the corresponding segmentation masks in `atlas_seg_list`. 
+        """ Apply atlas-based segmentation of `self.cmn_img[id_cmn]` using the list of CT images in `self.grp_img_data` and
+        the corresponding segmentation masks in `self.grp_mask_data`. 
         Return the resulting segmentation mask after majority voting. """
 
         image = self.cmn_img[id_cmn]
         foreground_mask = image > 0
-
-
         reg_masks = []
 
         for id_grp in self.grp_img:
-            # compute linear affine transformation 
+            # compute linear affine transformation with MI
             lin_trf = LinearTransform(
-                im_ref=self.cmn_img[id_cmn], im_mov=self.grp_img[id_grp])
+                im_ref=image, im_mov=self.grp_img[id_grp])
             lin_xfm = lin_trf.est_transf(metric="MI", num_iter=200, fix_img_mask=foreground_mask) #, mov_img_mask=self.grp_mask[id_grp], fix_img_mask=self.cmn_mask[id_cmn]
             # apply it to group image and its mask 
-            lin_reg_img  = sitk.Resample(self.grp_img[id_grp], self.cmn_img[id_cmn], lin_xfm, sitk.sitkLinear, 0.0,
+            lin_reg_img  = sitk.Resample(self.grp_img[id_grp], image, lin_xfm, sitk.sitkLinear, 0.0,
                                         self.grp_img[id_grp].GetPixelID())
-            lin_reg_mask = sitk.Resample(self.grp_mask[id_grp], self.cmn_img[id_cmn], lin_xfm, sitk.sitkNearestNeighbor, 0.0,
+            lin_reg_mask = sitk.Resample(self.grp_mask[id_grp], image, lin_xfm, sitk.sitkNearestNeighbor, 0.0,
                                         self.grp_mask[id_grp].GetPixelID())
             # compute FFD transform
             nl_trf = NonLinearTransform(
-                im_ref=self.cmn_img[id_cmn], im_mov=lin_reg_img)
+                im_ref=image, im_mov=lin_reg_img)
             nl_xfm = nl_trf.est_transf(metric="SSD", num_iter=10 ,  fix_img_mask=foreground_mask)#  fix_img_mask=self.cmn_mask[id_cmn]
             # apply it to linearly trasformed mask 
-            nl_reg_mask = sitk.Resample(lin_reg_mask, self.cmn_img[id_cmn],nl_xfm, sitk.sitkLinear, 0.0, lin_reg_mask.GetPixelID())
+            nl_reg_mask = sitk.Resample(lin_reg_mask, image,nl_xfm, sitk.sitkLinear, 0.0, lin_reg_mask.GetPixelID())
 
             reg_masks.append(sitk.GetArrayFromImage(nl_reg_mask))
 
@@ -113,3 +110,33 @@ class AtlasSegmentation():
             ut.plot_3d_img_masked(cmn_img, sitk.GetImageFromArray(mask))
             
         return self.majority_voting(reg_masks)
+
+
+def dice_analysis(mask, ref_mask):
+    """Checking and fixing Origin and Spacing, Maybe this is not how this should be fixed. """
+    if mask.GetSpacing() != ref_mask.GetSpacing():
+        ref_mask.SetSpacing(mask.GetSpacing())
+
+    if mask.GetOrigin() != ref_mask.GetOrigin():
+        ref_mask.SetOrigin(mask.GetOrigin())
+
+    overlap_measures_filter = sitk.LabelOverlapMeasuresImageFilter()
+    overlap_measures_filter.Execute(ref_mask, mask)
+    result = overlap_measures_filter.GetDiceCoefficient()
+    return result
+
+
+def hausdorf_distance_analysis(mask, ref_mask):
+    """Checking and fixing Origin and Spacing, Maybe this is not how this should be fixed. """
+    if mask.GetSpacing() != ref_mask.GetSpacing():
+        ref_mask.SetSpacing(mask.GetSpacing())
+
+    if mask.GetOrigin() != ref_mask.GetOrigin():
+        ref_mask.SetOrigin(mask.GetOrigin())
+
+    hausdorff_distance_filter = sitk.HausdorffDistanceImageFilter()
+
+    hausdorff_distance_filter.Execute(ref_mask, mask)
+    result = hausdorff_distance_filter.GetHausdorffDistance()
+    # print(result)
+    return result

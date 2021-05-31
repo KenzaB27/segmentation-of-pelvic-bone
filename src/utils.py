@@ -4,13 +4,12 @@ from scipy import linalg
 import SimpleITK as sitk
 import numpy as np
 
-def save_image(image, fileName):
 
+def save_image(image, fileName):
     writer = sitk.ImageFileWriter()
     writer.SetImageIO("NiftiImageIO")
     writer.SetFileName(fileName)
     writer.Execute(image)
-
     return True
 
 
@@ -21,7 +20,6 @@ def read_image(file_name):
 
 
 def plot_3d_img_slices(img, cmap="gray"):
-    #imageSize = img.GetSize()
     img_data = sitk.GetArrayFromImage(img)
     imageSize = img_data.shape
     plt.figure(figsize=(12, 8))
@@ -64,11 +62,12 @@ def plot_3d_img_masked(img, mask, alpha=0.3):
     plt.title('Sagittal')
     plt.show()
 
-# Callback invoked by the interact IPython method for scrolling through the image stacks of
-# the two images (moving and fixed).
-
 
 def display_images(fixed_image_z, moving_image_z, fixed_npa, moving_npa):
+    """
+    Callback invoked by the interact IPython method for scrolling through the image stacks of
+    the two images (moving and fixed).
+    """
     # Create a figure with two subplots and the specified size.
     plt.subplots(1, 2, figsize=(10, 8))
 
@@ -86,29 +85,28 @@ def display_images(fixed_image_z, moving_image_z, fixed_npa, moving_npa):
 
     plt.show()
 
-# Callback invoked by the IPython interact method for scrolling and modifying the alpha blending
-# of an image stack of two images that occupy the same physical space.
-
 
 def display_images_with_alpha(image_z, alpha, fixed, moving):
+    """ 
+    Callback invoked by the IPython interact method for scrolling and modifying the alpha blending
+    of an image stack of two images that occupy the same physical space.
+    """
     img = (1.0 - alpha)*fixed[:, :, image_z] + alpha*moving[:, :, image_z]
     plt.imshow(sitk.GetArrayViewFromImage(img), cmap=plt.cm.Greys_r)
     plt.axis('off')
     plt.show()
 
-# Callback invoked when the StartEvent happens, sets up our new data.
-
 
 def start_plot():
+    """ Callback invoked when the StartEvent happens, sets up our new data. """
     global metric_values, multires_iterations
 
     metric_values = []
     multires_iterations = []
 
-# Callback invoked when the EndEvent happens, do cleanup of data and figure.
-
 
 def end_plot():
+    """Callback invoked when the EndEvent happens, do cleanup of data and figure."""
     global metric_values, multires_iterations
 
     del metric_values
@@ -116,10 +114,9 @@ def end_plot():
     # Close figure, we don't want to get a duplicate of the plot latter on.
     plt.close()
 
-# Callback invoked when the IterationEvent happens, update our data and display new figure.
-
 
 def plot_values(registration_method):
+    """Callback invoked when the IterationEvent happens, update our data and display new figure."""
     global metric_values, multires_iterations
 
     metric_values.append(registration_method.GetMetricValue())
@@ -128,30 +125,32 @@ def plot_values(registration_method):
     # Plot the similarity metric values
     plt.plot(metric_values, 'r')
     plt.plot(multires_iterations, [metric_values[index]
-             for index in multires_iterations], 'b*')
+                                   for index in multires_iterations], 'b*')
     plt.xlabel('Iteration Number', fontsize=12)
     plt.ylabel('Metric Value', fontsize=12)
     plt.show()
 
-# Callback invoked when the sitkMultiResolutionIterationEvent happens, update the index into the
-# metric_values list.
-
 
 def update_multires_iterations():
+    """
+    Callback invoked when the sitkMultiResolutionIterationEvent happens, update the index into the
+    metric_values list.
+    """
     global metric_values, multires_iterations
     multires_iterations.append(len(metric_values))
 
 
-# Callback we associate with the MultiResolutionIterationEvent, update the
-# index into the metric_values list.
 def metric_update_multires_iterations():
+    """
+    Callback we associate with the MultiResolutionIterationEvent, update the
+    index into the metric_values list.
+    """
     global metric_values, multires_iterations
     multires_iterations.append(len(metric_values))
-
-# Callback we associate with the StartEvent, sets up our new data.
 
 
 def metric_and_reference_start_plot():
+    """ Callback we associate with the StartEvent, sets up our new data."""
     global metric_values, multires_iterations, reference_mean_values
     global reference_min_values, reference_max_values
     global current_iteration_number
@@ -163,10 +162,9 @@ def metric_and_reference_start_plot():
     reference_max_values = []
     current_iteration_number = -1
 
-# Callback we associate with the EndEvent, do cleanup of data and figure.
-
 
 def metric_and_reference_end_plot():
+    """Callback we associate with the EndEvent, do cleanup of data and figure."""
     global metric_values, multires_iterations, reference_mean_values
     global reference_min_values, reference_max_values
     global current_iteration_number
@@ -180,11 +178,12 @@ def metric_and_reference_end_plot():
     # Close figure, we don't want to get a duplicate of the plot latter on.
     plt.close()
 
-# Callback we associate with the IterationEvent, update our data and display
-# new figure.
-
 
 def metric_and_reference_plot_values(registration_method, fixed_points, moving_points):
+    """
+    Callback we associate with the IterationEvent, update our data and display
+    new figure.
+    """
     global metric_values, multires_iterations, reference_mean_values
     global reference_min_values, reference_max_values
     global current_iteration_number
@@ -216,7 +215,7 @@ def metric_and_reference_plot_values(registration_method, fixed_points, moving_p
     plt.subplot(1, 2, 1)
     plt.plot(metric_values, 'r')
     plt.plot(multires_iterations, [metric_values[index]
-             for index in multires_iterations], 'b*')
+                                   for index in multires_iterations], 'b*')
     plt.xlabel('Iteration Number', fontsize=12)
     plt.ylabel('Metric Value', fontsize=12)
     # Plot the TRE mean value and the [min-max] range.
@@ -235,64 +234,66 @@ def metric_and_reference_plot_values(registration_method, fixed_points, moving_p
 
 def registration_errors(tx, reference_fixed_point_list, reference_moving_point_list,
                         display_errors=False, min_err=None, max_err=None, figure_size=(8, 6)):
-  """
-  Distances between points transformed by the given transformation and their
-  location in another coordinate system. When the points are only used to 
-  evaluate registration accuracy (not used in the registration) this is the 
-  Target Registration Error (TRE).
-  
-  Args:
-      tx (SimpleITK.Transform): The transform we want to evaluate.
-      reference_fixed_point_list (list(tuple-like)): Points in fixed image 
-                                                     cooredinate system.
-      reference_moving_point_list (list(tuple-like)): Points in moving image 
-                                                      cooredinate system.
-      display_errors (boolean): Display a 3D figure with the points from 
-                                reference_fixed_point_list color corresponding
-                                to the error.
-      min_err, max_err (float): color range is linearly stretched between min_err 
-                                and max_err. If these values are not given then
-                                the range of errors computed from the data is used.
-      figure_size (tuple): Figure size in inches.
-  Returns:
-   (mean, std, min, max, errors) (float, float, float, float, [float]): 
-    TRE statistics and original TREs.
-  """
-  transformed_fixed_point_list = [tx.TransformPoint(
-      p) for p in reference_fixed_point_list]
+    """
+    Distances between points transformed by the given transformation and their
+    location in another coordinate system. When the points are only used to 
+    evaluate registration accuracy (not used in the registration) this is the 
+    Target Registration Error (TRE).
 
-  errors = [linalg.norm(np.array(p_fixed) - np.array(p_moving))
-            for p_fixed, p_moving in zip(transformed_fixed_point_list, reference_moving_point_list)]
-  min_errors = np.min(errors)
-  max_errors = np.max(errors)
-  if display_errors:
-      from mpl_toolkits.mplot3d import Axes3D
-      import matplotlib.pyplot as plt
-      import matplotlib
-      fig = plt.figure(figsize=figure_size)
-      ax = fig.add_subplot(111, projection='3d')
-      if not min_err:
-          min_err = min_errors
-      if not max_err:
-          max_err = max_errors
+    Args:
+        tx (SimpleITK.Transform): The transform we want to evaluate.
+        reference_fixed_point_list (list(tuple-like)): Points in fixed image 
+                                                       cooredinate system.
+        reference_moving_point_list (list(tuple-like)): Points in moving image 
+                                                        cooredinate system.
+        display_errors (boolean): Display a 3D figure with the points from 
+                                  reference_fixed_point_list color corresponding
+                                  to the error.
+        min_err, max_err (float): color range is linearly stretched between min_err 
+                                  and max_err. If these values are not given then
+                                  the range of errors computed from the data is used.
+        figure_size (tuple): Figure size in inches.
+    Returns:
+     (mean, std, min, max, errors) (float, float, float, float, [float]): 
+      TRE statistics and original TREs.
+    """
+    transformed_fixed_point_list = [tx.TransformPoint(
+        p) for p in reference_fixed_point_list]
 
-      collection = ax.scatter(list(np.array(reference_fixed_point_list).T)[0],
-                              list(np.array(reference_fixed_point_list).T)[1],
-                              list(np.array(reference_fixed_point_list).T)[2],
-                              marker='o',
-                              c=errors,
-                              vmin=min_err,
-                              vmax=max_err,
-                              cmap=matplotlib.cm.hot,
-                              label='fixed points')
-      plt.colorbar(collection, shrink=0.8)
-      plt.title('registration errors in mm', x=0.7, y=1.05)
-      ax.set_xlabel('X')
-      ax.set_ylabel('Y')
-      ax.set_zlabel('Z')
-      plt.show()
+    errors = [linalg.norm(np.array(p_fixed) - np.array(p_moving))
+              for p_fixed, p_moving in zip(transformed_fixed_point_list, reference_moving_point_list)]
+    min_errors = np.min(errors)
+    max_errors = np.max(errors)
+    if display_errors:
+        from mpl_toolkits.mplot3d import Axes3D
+        import matplotlib.pyplot as plt
+        import matplotlib
+        fig = plt.figure(figsize=figure_size)
+        ax = fig.add_subplot(111, projection='3d')
+        if not min_err:
+            min_err = min_errors
+        if not max_err:
+            max_err = max_errors
 
-  return (np.mean(errors), np.std(errors), min_errors, max_errors, errors)
+        collection = ax.scatter(list(np.array(reference_fixed_point_list).T)[0],
+                                list(np.array(reference_fixed_point_list).T)[
+            1],
+            list(np.array(reference_fixed_point_list).T)[
+            2],
+            marker='o',
+            c=errors,
+            vmin=min_err,
+            vmax=max_err,
+            cmap=matplotlib.cm.hot,
+            label='fixed points')
+        plt.colorbar(collection, shrink=0.8)
+        plt.title('registration errors in mm', x=0.7, y=1.05)
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        plt.show()
+
+    return (np.mean(errors), np.std(errors), min_errors, max_errors, errors)
 
 
 def create_ref_domain(images):
@@ -311,9 +312,9 @@ def create_ref_domain(images):
     # Select arbitrary number of pixels per dimension, smallest size that yields desired results
     # or the required size of a pretrained network (e.g. VGG-16 224x224), transfer learning. This will
     # often result in non-isotropic pixel spacing.
-    reference_size = [256,256,128] #* dimension
-    reference_spacing = [phys_sz / (sz - 1) for sz, phys_sz in zip(reference_size, reference_physical_size)]
-
+    reference_size = [256, 256, 128]  # * dimension
+    reference_spacing = [
+        phys_sz / (sz - 1) for sz, phys_sz in zip(reference_size, reference_physical_size)]
 
     # Note, if we get problems with the masks then maybe this is a good idea!
 
@@ -343,7 +344,7 @@ def create_ref_domain(images):
 def resample_all_images(images1, masks1):
     images = []
     masks = []
-    for img, mask in zip(images1 , masks1):
+    for img, mask in zip(images1, masks1):
         [image, mask] = threshold_based_crop(img, mask)
         images.append(image)
         masks.append(mask)
@@ -351,13 +352,15 @@ def resample_all_images(images1, masks1):
     [reference_image, reference_center] = create_ref_domain(images)
     resampled_images = []
     resampled_masks = []
-    for image, mask in zip(images,masks):
+    for image, mask in zip(images, masks):
         transform = sitk.CenteredTransformInitializer(reference_image,
-                                                          image,
-                                                          sitk.Euler3DTransform(),
-                                                          sitk.CenteredTransformInitializerFilter.GEOMETRY)
-        resampled_images.append(sitk.Resample(image, reference_image, transform, sitk.sitkLinear, 0.0, image.GetPixelID()))
-        resampled_masks.append(sitk.Resample(mask, reference_image, transform, sitk.sitkNearestNeighbor, 0.0, image.GetPixelID()))
+                                                      image,
+                                                      sitk.Euler3DTransform(),
+                                                      sitk.CenteredTransformInitializerFilter.GEOMETRY)
+        resampled_images.append(sitk.Resample(
+            image, reference_image, transform, sitk.sitkLinear, 0.0, image.GetPixelID()))
+        resampled_masks.append(sitk.Resample(
+            mask, reference_image, transform, sitk.sitkNearestNeighbor, 0.0, image.GetPixelID()))
     return [resampled_images, resampled_masks]
 
 
@@ -376,9 +379,12 @@ def threshold_based_crop(image, mask):
     inside_value = 0
     outside_value = 255
     label_shape_filter = sitk.LabelShapeStatisticsImageFilter()
-    label_shape_filter.Execute(sitk.OtsuThreshold(image, inside_value, outside_value) )
+    label_shape_filter.Execute(sitk.OtsuThreshold(
+        image, inside_value, outside_value))
     bounding_box = label_shape_filter.GetBoundingBox(outside_value)
     # The bounding box's first "dim" entries are the starting index and last "dim" entries the size
-    image_output = sitk.RegionOfInterest(image, bounding_box[int(len(bounding_box) / 2):], bounding_box[0:int(len(bounding_box) / 2)])
-    mask_output = sitk.RegionOfInterest(mask, bounding_box[int(len(bounding_box)/2):], bounding_box[0:int(len(bounding_box)/2)])
+    image_output = sitk.RegionOfInterest(image, bounding_box[int(
+        len(bounding_box) / 2):], bounding_box[0:int(len(bounding_box) / 2)])
+    mask_output = sitk.RegionOfInterest(mask, bounding_box[int(
+        len(bounding_box)/2):], bounding_box[0:int(len(bounding_box)/2)])
     return image_output, mask_output

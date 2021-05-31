@@ -19,10 +19,8 @@ class Transform():
             self.im_mov = im_mov
             self.im_ref = im_ref
 
-
     def apply_transf(self, transformation, interp=Interpolater.LINEAR, im=None):
-        """ Apply given linear transform `lin_xfm` to `self.im_mov` and 
-        return the transformed image. """
+        """ Apply given transformation to `self.im_mov` and return the transformed image. """
 
         resampler = sitk.ResampleImageFilter()
         # Set the reference image
@@ -31,7 +29,7 @@ class Transform():
         resampler.SetInterpolator(interp.value)
         # Set the transformation 'transformation'
         resampler.SetTransform(transformation)
-        
+
         moving_img = self.im_mov if im is None else im
         trans_im_mov = resampler.Execute(moving_img)
 
@@ -39,6 +37,7 @@ class Transform():
 
     @staticmethod
     def create_mask_of_interest(mask_name, labels, verbose=False):
+        """Create a mask with only the labels of interest."""
         mask = sitk.ReadImage(mask_name)
         mask_of_interest = (mask == labels[0])
         plot_3d_img_slices(mask_of_interest)
@@ -51,13 +50,12 @@ class Transform():
             mask_of_interest += (mask == label)
         return mask_of_interest
 
-
-    #Maintains lable name
     def create_mask_of_interest2(mask_image, labels, verbose=True):
-        mask= sitk.GetArrayFromImage(mask_image)
+        """Create a mask with only the labels of interest and maintain their name"""
+        mask = sitk.GetArrayFromImage(mask_image)
         mask_of_interest = np.zeros(mask.shape)
         for label in labels:
-            mask_of_interest[mask==label] = label
+            mask_of_interest[mask == label] = label
 
         mask_of_interest = sitk.GetImageFromArray(mask_of_interest)
 
@@ -65,15 +63,15 @@ class Transform():
             plot_3d_img_slices(mask_of_interest)
         return mask_of_interest
 
+
 class LinearTransform(Transform):
-    def __init__(self, im_ref_filename = None, im_mov_filename = None, im_mov=None, im_ref=None):
+    def __init__(self, im_ref_filename=None, im_mov_filename=None, im_mov=None, im_ref=None):
         super().__init__(im_ref_filename, im_mov_filename, im_mov, im_ref)
 
-    def est_transf(self, fix_img_mask=None, mov_img_mask=None , metric='MI', interp=Interpolater.LINEAR, num_iter=200, gradient_descent_step=1, conv_min_value=1e-6, verbose=True):
-        """ Estimate linear transform to align `self.im_mov` to `self.im_ref` and 
-        return the transform parameters. """
-
-        affine_transform = sitk.AffineTransform(3)  # 3D affine transformation
+    def est_transf(self, fix_img_mask=None, mov_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=200, gradient_descent_step=1, conv_min_value=1e-6, verbose=True):
+        """ Estimate linear transform to align `self.im_mov` to `self.im_ref` and return the transform parameters. """
+        # 3D affine transformation
+        affine_transform = sitk.AffineTransform(3)
         # Set a reference center for the registration
         affine_transform.SetCenter([0, 0, 0])
 
@@ -139,13 +137,12 @@ class LinearTransform(Transform):
 
 
 class NonLinearTransform(Transform):
-    def __init__(self, im_ref_filename = None, im_mov_filename = None, im_mov=None, im_ref=None):
+    def __init__(self, im_ref_filename=None, im_mov_filename=None, im_mov=None, im_ref=None):
         super().__init__(im_ref_filename, im_mov_filename, im_mov, im_ref)
 
     def est_transf(self, fix_img_mask=None, mov_img_mask=None, metric='MI', interp=Interpolater.LINEAR, num_iter=200, gradient_descent_step=1, conv_min_value=1e-6, fixed_points=None, moving_points=None, verbose=True):
         """
-        Estimate non-linear transform to align `im_mov` to `im_ref` and
-        return the transform parameters.
+        Estimate non-linear transform to align `self.im_mov` to `self.im_ref` and return the transform parameters.
         """
         registration_method = sitk.ImageRegistrationMethod()
 
