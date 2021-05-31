@@ -1,7 +1,6 @@
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import SimpleITK as sitk
-import tensorflow as tf
 import numpy as np
 
 CMN_IMG_PATH = "data/COMMON_images_masks/common_{0}_image.nii.gz"

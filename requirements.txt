@@ -1,0 +1,8 @@
+tensorflow-addons
+opencv-python
+matplotlib
+tensorflow 
+SimpleITK 
+sklearn
+numpy
+scipy

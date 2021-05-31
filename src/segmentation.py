@@ -1,6 +1,6 @@
 import numpy as np
 import SimpleITK as sitk
-from registration import LinearTransform, NonLinearTransform, Transform
+from registration import LinearTransform, NonLinearTransform
 import utils as ut
 
 NEW_PATH = "../data/resampled_images_256/"
